@@ -27,19 +27,21 @@ import javax.imageio.ImageIO;
 public class ImageResize {
     String source;
     String output;
+    boolean verbose;
 
     static final String MESSAGE;
 
     static {
         StringBuffer buffer = new StringBuffer();
         buffer.append("图片批量缩放调整工具").append("\n");
-        buffer.append("-source: 图片源文件夹").append("\n");
-        buffer.append("-output: 图片输出文件夹").append("\n");
-        buffer.append("-width: 指定宽度").append("\n");
-        buffer.append("-height: 指定高度").append("\n");
-        buffer.append("-scale: 缩放比例").append("\n");
-        buffer.append("-max: 最大的高度或者宽度").append("\n");
-        buffer.append("-minNotResize: 是否小于计算尺寸的图片需要进行放大").append("\n");
+        buffer.append(" -source(s): 图片源文件夹").append("\n");
+        buffer.append(" -output(o): 图片输出文件夹").append("\n");
+        buffer.append(" -width(w): 指定宽度").append("\n");
+        buffer.append(" -height(h): 指定高度").append("\n");
+        buffer.append(" -percent(p): 缩放比例").append("\n");
+        buffer.append(" -max(m): 最大的高度或者宽度").append("\n");
+        buffer.append(" -less(l): y/n 是否小于计算尺寸的图片需要进行放大").append("\n");
+        buffer.append(" -verbose(v): y/n 唐生模式").append("\n");
         MESSAGE = buffer.toString();
     }
 
@@ -48,69 +50,94 @@ public class ImageResize {
         if (args.length == 0 || args.length % 2 != 0) {
             System.out.println(MESSAGE);
             System.exit(0);
+            return;
         }
         String source = null;
         String output = null;
         int width = 0;
         int height = 0;
-        double scale = -1d;
+        double percent = -1d;
         int max = -1;
-        boolean minNotResize = false;
-        int index = 0;
+        boolean less = true;
+        boolean verbose = false;
         for (int i = 0; i < args.length; i += 2) {
             String name = args[i];
             String value = args[i + 1];
-            System.out.println(index + ":" + name + "(" + value + ")");
             switch (name) {
                 case "-source":
+                case "-s":
                     source = value;
                     break;
                 case "-output":
+                case "-o":
                     output = value;
                     break;
                 case "-width":
+                case "-w":
                     width = Integer.valueOf(value);
                     break;
                 case "-height":
+                case "-h":
                     height = Integer.valueOf(value);
                     break;
-                case "-scale":
-                    scale = Double.valueOf(value);
+                case "-percent":
+                case "-p":
+                    percent = Double.valueOf(value);
                     break;
                 case "-max":
+                case "-m":
                     max = Integer.valueOf(value);
                     break;
-                case "-minNotResize":
-                    minNotResize = Boolean.valueOf(value);
+                case "-less":
+                case "-l":
+                    less = "y".equals(value) || "true".equals(value);
+                    break;
+                case "-verbose":
+                case "-v":
+                    verbose = "y".equals(value) || "true".equals(value);
+                    if(verbose){
+                        System.out.println("开始唐生模式");
+                    }
                     break;
                 default:
                     System.out.println(MESSAGE);
                     System.exit(0);
+                    return;
             }
-            index++;
         }
-        ImageResize imageResize = new ImageResize(source, output);
-        imageResize.resize(width, height, scale, max, minNotResize);
+        if(verbose){
+                System.out.println("source:" + source);
+                System.out.println("output:" + output);
+                System.out.println("width:" + width);
+                System.out.println("height:" + height);
+                System.out.println("percent:" + percent);
+                System.out.println("max:" + max);
+                System.out.println("less:" + less);
+                System.out.println("verbose:" + verbose);
+        }
+        ImageResize imageResize = new ImageResize(source, output, verbose);
+        imageResize.resize(width, height, percent, max, less);
     }
 
-    public ImageResize(String source, String output) {
+    public ImageResize(String source, String output, boolean verbose) {
         this.source = source;
         this.output = output;
+        this.verbose = verbose;
     }
 
-    public void resize(int max, boolean minNotResize) throws Exception {
-        resize(0, 0, -1, max, minNotResize);
+    public void resize(int max, boolean less) throws Exception {
+        resize(0, 0, -1, max, less);
     }
 
-    public void resize(int width, int height, boolean minNotResize) throws Exception {
-        resize(width, height, -1, -1, minNotResize);
+    public void resize(int width, int height, boolean less) throws Exception {
+        resize(width, height, -1, -1, less);
     }
 
-    public void resize(double zoom, boolean minNotResize) throws Exception {
-        resize(0, 0, zoom, -1, minNotResize);
+    public void resize(double zoom, boolean less) throws Exception {
+        resize(0, 0, zoom, -1, less);
     }
 
-    public void resize(int width, int height, double zoom, int max, boolean minNotResize) throws IOException, ImageProcessingException, MetadataException {
+    public void resize(int width, int height, double zoom, int max, boolean less) throws IOException, ImageProcessingException, MetadataException {
         File dir = new File(source);
         if (!dir.isDirectory()) {
             System.err.println("is not a dir");
@@ -127,11 +154,15 @@ public class ImageResize {
         if (!outputFile.exists() && !outputFile.isDirectory()) {
             outputFile.mkdir();
         }
+        int i = 0;
         for (File file : files) {
-            System.out.println("开始处理文件");
-            System.out.println("\t\t\t" + file);
-            resize(file, width, height, zoom, max, minNotResize);
-            System.out.println("处理文件结束");
+            ++i;
+            int progress = (int) ((double)i / (double)files.length * 100);
+            System.out.println(progress+ "%");
+            if(verbose){
+                System.out.println("处理文件:" + file + " (" + (i) + "/"+ files.length + ")");
+            }
+            resize(file, width, height, zoom, max, less);
         }
 
     }
@@ -145,7 +176,7 @@ public class ImageResize {
         }
     }
 
-    public void resize(File file, int newWidth, int newHeight, double zoom, int max, boolean minNotResize) throws ImageProcessingException, IOException, MetadataException {
+    public void resize(File file, int newWidth, int newHeight, double zoom, int max, boolean less) throws ImageProcessingException, IOException, MetadataException {
         double orientation = 0.0d;
         int width = 0;
         int height = 0;
@@ -203,18 +234,18 @@ public class ImageResize {
                         throw new RuntimeException("无效的缩放比了和固定最大宽度");
                     }
                     if (bi.getHeight() >= bi.getWidth()) {
-                        if (minNotResize) {
-                            zoom = 1.0d;
-                        } else {
+                        if (less) {
                             zoom = (double) max / (double) height;
+                        } else {
+                            zoom = 1.0d;
                         }
                         newWidth = (int) (((double) bi.getWidth()) * zoom);
                         newHeight = (int) (((double) bi.getHeight()) * zoom);
                     } else {
-                        if (minNotResize) {
-                            zoom = 1.0d;
-                        } else {
+                        if (less) {
                             zoom = (double) max / (double) width;
+                        } else {
+                            zoom = 1.0d;
                         }
                         newWidth = (int) (((double) bi.getWidth()) * zoom);
                         newHeight = (int) (((double) bi.getHeight()) * zoom);
