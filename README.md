@@ -1,6 +1,6 @@
 # image-resize
 image resize utility.
-
+```
 java -jar image-resize.jar
 图片批量缩放调整工具
  -source(s): 图片源文件夹
@@ -11,6 +11,7 @@ java -jar image-resize.jar
  -max(m): 最大的高度或者宽度
  -less(l): y/n 是否小于计算尺寸的图片需要进行放大
  -verbose(v): y/n 唐生模式
+```
 
 也可以使用maven进行依赖，引入项目
 ```xml
