@@ -20,8 +20,10 @@ java -jar image-resize.jar
     <version>1.0.0</version>
 </dependency>
 ```
+```java
 ImageResize imageResize = new ImageResize(source, output, verbose);
 imageResize.resize(80, true);//调整图片的高度或者宽度其中最大的为80px,小于80px的图片放大到80px
 imageResize.resize(0.5, true);//调整图片的高度和宽度为一半
 imageResize.resize(500, 0, true);//调整照片的高度为500，宽度按照比例调整
 imageResize.resize(0, 500, true);//调整照片的宽度为500，高度按照比例调整
+```
